@@ -501,7 +501,11 @@ export default async function importWooCommerce({ container, args }: ExecArgs) {
         filters: { product_id: result[0].id },
       })
 
-      const levels = []
+      const levels: {
+        location_id: string
+        inventory_item_id: string
+        stocked_quantity: number
+      }[] = []
       for (const v of variants) {
         const plan = p.variants.find((pv) => pv.title === v.title)
         const inventoryItemId = v.inventory_items?.[0]?.inventory_item_id

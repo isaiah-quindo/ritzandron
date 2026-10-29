@@ -32,8 +32,18 @@ const mailtrap =
     ? { api_token: env.MAILTRAP_API_TOKEN, inbox_id: env.MAILTRAP_INBOX_ID }
     : undefined
 
-if (isProduction && !env.RESEND_API_KEY) {
-  console.warn("RESEND_API_KEY is not set: customer emails will only be logged, not sent")
+// Settings that silently degrade in production instead of failing outright.
+if (isProduction) {
+  const problems = [
+    !env.RESEND_API_KEY && "RESEND_API_KEY is not set: customer emails will only be logged, not sent",
+    !env.S3_BUCKET && "S3_BUCKET is not set: uploads go to local disk, which is wiped on redeploy",
+    !env.REDIS_URL && "REDIS_URL is not set: events, workflows and locks run in memory only",
+    [env.JWT_SECRET, env.COOKIE_SECRET].some((s) => !s || s === "supersecret") &&
+      "JWT_SECRET / COOKIE_SECRET are missing or still the template default",
+  ]
+  for (const problem of problems.filter(Boolean)) {
+    console.warn(problem)
+  }
 }
 
 const emailProvider = mailtrap || env.RESEND_API_KEY

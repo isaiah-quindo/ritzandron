@@ -30,7 +30,7 @@
     "@medusajs/draft-order": "2.22.1",
     "@medusajs/framework": "2.22.1",
     "@medusajs/medusa": "2.22.1",
-    "@medusajs/ui": "4.2.6",
+    "@medusajs/ui": "4.2.8",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.1.1",
     "@sanity/client": "^7.28.0",

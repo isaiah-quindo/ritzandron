@@ -17,7 +17,13 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "checkJs": false,
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    // One set of React types for the whole program: hoisted packages such as
+    // @react-email/components otherwise pick up the root's React 19 types.
+    "paths": {
+      "react": ["./node_modules/@types/react"],
+      "react/*": ["./node_modules/@types/react/*"]
+    }
   },
   "ts-node": {
     "swc": true

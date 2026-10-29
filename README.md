@@ -51,6 +51,67 @@ Every integration is optional locally. Without its keys:
   `npx medusa exec ./src/scripts/sync-sanity.ts`. Add a webhook (projection `{_type}`) to
   `{storefront}/api/revalidate` signed with `SANITY_WEBHOOK_SECRET`.
 
+## Deploying the backend (Laravel Cloud)
+
+The storefront deploys to Vercel (root directory `apps/storefront`); the backend to Laravel Cloud.
+
+**Create the application**: New application > this repo > region **Asia Pacific (Sydney)**. When
+Cloud lists the apps it found, pick root directory `apps/backend`. Runtime: Node 24 (General
+Settings > Runtime).
+
+**Resources** (environment canvas), all in Sydney:
+
+- Database: either Laravel Serverless Postgres (Add database; Cloud injects `DATABASE_URL`) or
+  Supabase Pro (set `DATABASE_URL` yourself, see `.env.template`). With Laravel Postgres, use the
+  default (direct) host, not the `-pooler` host: Medusa's migrations and locks need a session
+  connection.
+- Cache: Laravel Valkey (Cloud injects `REDIS_URL`, `rediss://`). Turn **Scale to Zero off** in the
+  cache's settings.
+
+**App cluster**: Flex 1 GiB, **Scale to Zero off**. Medusa runs background jobs and event
+subscribers (order emails, Sanity sync), so it must stay awake.
+
+**Commands** (Settings > Deployments):
+
+| Setting | Value |
+| --- | --- |
+| Build command | `npm ci --audit false && npx medusa build && cd .medusa/server && npm install --omit=dev --audit false` |
+| Deploy command | `cd .medusa/server && npx medusa db:migrate` |
+| Start command | `cd .medusa/server && npm run start` |
+| Health checks > Readiness endpoint | `/health` |
+
+`medusa start` listens on the `PORT` Cloud provides. The deploy command runs migrations before each
+release goes live; if it fails, the previous release keeps serving. If the first build fails at
+`npm ci` (lockfile not found from `apps/backend`), use
+`cd ../.. && npm ci --audit false && cd apps/backend && npx medusa build && ...` instead.
+
+**Environment variables** (custom values override injected ones; redeploy after changes):
+
+| Variable | Value |
+| --- | --- |
+| `DATABASE_SSL` | `true` |
+| `MEDUSA_BACKEND_URL` | `https://api.ritzandron.com.au` (baked into the admin at build time) |
+| `STOREFRONT_URL` | `https://ritzandron.com.au` |
+| `STORE_CORS` | `https://ritzandron.com.au` |
+| `ADMIN_CORS` | `https://api.ritzandron.com.au` |
+| `AUTH_CORS` | `https://ritzandron.com.au,https://api.ritzandron.com.au` |
+| `JWT_SECRET`, `COOKIE_SECRET` | long random strings (`openssl rand -hex 32`), not `supersecret` |
+| `S3_*` | Supabase Storage; required, because Cloud's disk is wiped on each deploy |
+| `SANITY_PROJECT_ID`, `SANITY_WRITE_TOKEN` | as local; `SANITY_DATASET=production` |
+| `REVALIDATE_SECRET` | same value as the storefront's |
+| `RESEND_*` | see [Production email](#production-email-resend) |
+| `SQUARE_*` | production credentials, `SQUARE_ENVIRONMENT=production` |
+
+Don't set `MAILTRAP_*` or `HOST`. At startup the backend warns if Resend, S3, Redis or the secrets
+are missing; check the first deploy's logs for those lines.
+
+**Domain**: Settings > Domains > `api.ritzandron.com.au`, then add the DNS record Cloud shows.
+The admin is at `https://api.ritzandron.com.au/app`. Point the storefront's
+`NEXT_PUBLIC_MEDUSA_BACKEND_URL` at the same URL and redeploy it.
+
+**First deploy with the copied database**: restore the local dump into the production database
+before the first deploy, so the deploy command only finds already-applied migrations.
+
 ## Production email (Resend)
 
 Mailboxes for `@ritzandron.com.au` are on Namecheap Private Email (MX `privateemail.com`). Resend
