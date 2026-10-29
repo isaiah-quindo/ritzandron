@@ -1,0 +1,167 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+/*
+ * Ritz & Ron palette, applied to the Medusa UI tokens used across the
+ * starter's components: white ground, near-black type, neutral greys.
+ */
+:root:root,
+:root[data-mode="light"] {
+  --bg-base: #ffffff;
+  --bg-base-hover: #f5f5f5;
+  --bg-subtle: #f5f5f5;
+  --bg-subtle-hover: #ededed;
+  --bg-component: #ffffff;
+  --bg-component-hover: #f5f5f5;
+  --bg-field: #f5f5f5;
+  --bg-field-hover: #efefef;
+  --bg-interactive: #141414;
+  --bg-highlight: #f5f5f5;
+  --fg-base: #141414;
+  --fg-subtle: #4a4a4a;
+  --fg-muted: #6f6f6f;
+  --fg-interactive: #141414;
+  --fg-interactive-hover: #4a4a4a;
+  --border-base: #e8e8e8;
+  --border-strong: #d4d4d4;
+  --border-interactive: #141414;
+  --button-neutral: #ffffff;
+  --button-neutral-hover: #f5f5f5;
+  --button-inverted: #141414;
+  --button-inverted-hover: #3a3a3a;
+  --borders-base: 0 0 0 1px #e8e8e8;
+  --borders-focus: 0 0 0 1px #141414;
+  --buttons-neutral: 0 0 0 1px #e8e8e8;
+  --buttons-inverted: none;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Tight tracking on the system sans, as on the reference site. */
+  body {
+    @apply bg-paper text-charcoal font-sans tracking-[-0.03em];
+  }
+
+  ::selection {
+    @apply bg-accent-light text-charcoal;
+  }
+}
+
+@layer utilities {
+  /* Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  input:focus ~ label,
+  input:not(:placeholder-shown) ~ label {
+    @apply -translate-y-2 text-xsmall-regular;
+  }
+
+  input:focus ~ label {
+    @apply left-0;
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    border: 1px solid #212121;
+    -webkit-text-fill-color: #212121;
+    -webkit-box-shadow: 0 0 0px 1000px #fff inset;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+
+  input[type="search"]::-webkit-search-decoration,
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-results-button,
+  input[type="search"]::-webkit-search-results-decoration {
+    -webkit-appearance: none;
+  }
+}
+
+@layer components {
+  .content-container {
+    @apply max-w-[1440px] w-full mx-auto px-4 small:px-10;
+  }
+
+
+
+  .link-underline {
+    @apply relative after:absolute after:left-0 after:-bottom-0.5 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-current after:transition-transform after:duration-300 hover:after:scale-x-100;
+  }
+
+  .contrast-btn {
+    @apply px-4 py-2 border border-black rounded-full hover:bg-black hover:text-white transition-colors duration-200 ease-in;
+  }
+
+  .text-xsmall-regular {
+    @apply text-[10px] leading-4 font-normal;
+  }
+
+  .text-small-regular {
+    @apply text-xs leading-5 font-normal;
+  }
+
+  .text-small-semi {
+    @apply text-xs leading-5 font-semibold;
+  }
+
+  .text-base-regular {
+    @apply text-sm leading-6 font-normal;
+  }
+
+  .text-base-semi {
+    @apply text-sm leading-6 font-semibold;
+  }
+
+  .text-large-regular {
+    @apply text-base leading-6 font-normal;
+  }
+
+  .text-large-semi {
+    @apply text-base leading-6 font-semibold;
+  }
+
+  .text-xl-regular {
+    @apply text-2xl leading-[36px] font-normal;
+  }
+
+  .text-xl-semi {
+    @apply text-2xl leading-[36px] font-semibold;
+  }
+
+  .text-2xl-regular {
+    @apply text-[30px] leading-[48px] font-normal;
+  }
+
+  .text-2xl-semi {
+    @apply text-[30px] leading-[48px] font-semibold;
+  }
+
+  .text-3xl-regular {
+    @apply text-[32px] leading-[44px] font-normal;
+  }
+
+  .text-3xl-semi {
+    @apply text-[32px] leading-[44px] font-semibold;
+  }
+}
