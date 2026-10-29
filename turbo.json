@@ -3,7 +3,16 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**"]
+      "outputs": ["dist/**", ".next/**"],
+      "env": [
+        "SANITY_*",
+        "RESEND_*",
+        "MAILTRAP_*",
+        "REVALIDATE_SECRET",
+        "CONTACT_EMAIL",
+        "MEDUSA_*",
+        "STOREFRONT_URL"
+      ]
     },
     "dev": {
       "cache": false,
