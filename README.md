@@ -55,9 +55,10 @@ Every integration is optional locally. Without its keys:
 
 The storefront deploys to Vercel (root directory `apps/storefront`); the backend to Laravel Cloud.
 
-**Create the application**: New application > this repo > region **Asia Pacific (Sydney)**. When
-Cloud lists the apps it found, pick root directory `apps/backend`. Runtime: Node 24 (General
-Settings > Runtime).
+**Create the application**: New application > this repo > region **Asia Pacific (Sydney)**. Keep
+the **repository root** as the root directory, not `apps/backend`: Cloud requires a lockfile in
+the root directory, and the workspace's single `package-lock.json` lives at the repo root (don't
+add a second one in `apps/backend`). Runtime: Node 24 (General Settings > Runtime).
 
 **Resources** (environment canvas), all in Sydney:
 
@@ -75,15 +76,14 @@ subscribers (order emails, Sanity sync), so it must stay awake.
 
 | Setting | Value |
 | --- | --- |
-| Build command | `npm ci --audit false && npx medusa build && cd .medusa/server && npm install --omit=dev --audit false` |
-| Deploy command | `cd .medusa/server && npx medusa db:migrate` |
-| Start command | `cd .medusa/server && npm run start` |
+| Build command | `npm ci --audit false && cd apps/backend && npx medusa build && cd .medusa/server && npm install --omit=dev --audit false` |
+| Deploy command | `cd apps/backend/.medusa/server && npx medusa db:migrate` |
+| Start command | `cd apps/backend/.medusa/server && npm run start` |
 | Health checks > Readiness endpoint | `/health` |
 
 `medusa start` listens on the `PORT` Cloud provides. The deploy command runs migrations before each
-release goes live; if it fails, the previous release keeps serving. If the first build fails at
-`npm ci` (lockfile not found from `apps/backend`), use
-`cd ../.. && npm ci --audit false && cd apps/backend && npx medusa build && ...` instead.
+release goes live; if it fails, the previous release keeps serving. `npm ci` installs both apps'
+packages from the root lockfile; `.medusa/server` then gets its own production install.
 
 **Environment variables** (custom values override injected ones; redeploy after changes):
 
