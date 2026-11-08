@@ -7,7 +7,7 @@ Headless rebuild of [ritzandron.com.au](https://ritzandron.com.au): sterling sil
 | `apps/storefront` | Next.js 16 storefront (port 8000) + Sanity Studio at `/studio` |
 | `apps/backend` | Medusa v2: products, cart, orders, admin (port 9000, admin at `/app`) |
 | Supabase | Postgres for Medusa, Storage (S3 API) for product images |
-| Square | Card payments (custom provider in `apps/backend/src/modules/square-payment`) |
+| Stripe | Card payments (Medusa's built-in Stripe provider) |
 | Australia Post | Flat-rate shipping; tracking numbers typed in the admin |
 | Resend | Order, shipping, password and welcome emails; newsletter and contact form |
 
@@ -29,7 +29,7 @@ Copy the "Storefront" publishable key from the admin (Settings > Publishable API
 
 Every integration is optional locally. Without its keys:
 
-- Square: only the manual test payment shows at checkout.
+- Stripe: only the manual test payment shows at checkout.
 - Resend: emails are printed to the backend log. Set `MAILTRAP_API_TOKEN` and `MAILTRAP_INBOX_ID`
   in both apps to send them to a Mailtrap test inbox instead, then
   `npx medusa exec ./src/scripts/send-test-emails.ts` sends one of each template.
@@ -41,10 +41,14 @@ Every integration is optional locally. Without its keys:
 
 - **Supabase**: set `DATABASE_URL` (session pooler, port 5432) and `DATABASE_SSL=true`; create a
   public `product-images` bucket and fill in the `S3_*` variables.
-- **Square**: set `SQUARE_*` in the backend and `NEXT_PUBLIC_SQUARE_*` in the storefront, re-run
-  the seed or enable "pp_square_square" on the Australia region (Settings > Regions). Add a webhook
-  for `payment.updated` pointing at `{MEDUSA_BACKEND_URL}/hooks/payment/square_square`.
-  Sandbox test card: 4111 1111 1111 1111, any future expiry, any CVV.
+- **Stripe**: set `STRIPE_API_KEY` and `STRIPE_WEBHOOK_SECRET` in the backend and
+  `NEXT_PUBLIC_STRIPE_KEY` in the storefront, then re-run the seed or enable "pp_stripe_stripe" on the
+  Australia region (Settings > Regions). Add a webhook endpoint at
+  `{MEDUSA_BACKEND_URL}/hooks/payment/stripe_stripe` for `payment_intent.succeeded`,
+  `payment_intent.amount_capturable_updated`, `payment_intent.payment_failed` and
+  `payment_intent.partially_funded`. Locally, `stripe listen --forward-to
+  localhost:9000/hooks/payment/stripe_stripe` prints the webhook secret to use.
+  Test card: 4242 4242 4242 4242, any future expiry, any CVC.
 - **Resend**: see [Production email](#production-email-resend) below.
 - **Sanity**: create a project, set the Sanity variables in both apps, add `http://localhost:8000`
   as a CORS origin, then backfill products with
@@ -100,7 +104,7 @@ packages from the root lockfile; `.medusa/server` then gets its own production i
 | `SANITY_PROJECT_ID`, `SANITY_WRITE_TOKEN` | as local; `SANITY_DATASET=production` |
 | `REVALIDATE_SECRET` | same value as the storefront's |
 | `RESEND_*` | see [Production email](#production-email-resend) |
-| `SQUARE_*` | production credentials, `SQUARE_ENVIRONMENT=production` |
+| `STRIPE_API_KEY`, `STRIPE_WEBHOOK_SECRET` | live-mode key and the production webhook's signing secret |
 
 Don't set `MAILTRAP_*` or `HOST`. At startup the backend warns if Resend, S3, Redis or the secrets
 are missing; check the first deploy's logs for those lines.

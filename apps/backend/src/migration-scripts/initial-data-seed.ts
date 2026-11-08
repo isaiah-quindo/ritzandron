@@ -120,8 +120,8 @@ export default async function initial_data_seed({
 
   logger.info("Seeding Australia region...");
   const paymentProviders = ["pp_system_default"];
-  if (process.env.SQUARE_ACCESS_TOKEN) {
-    paymentProviders.push("pp_square_square");
+  if (process.env.STRIPE_API_KEY) {
+    paymentProviders.push("pp_stripe_stripe");
   }
 
   const { result: regionResult } = await createRegionsWorkflow(container).run({

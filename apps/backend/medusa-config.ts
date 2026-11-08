@@ -4,20 +4,16 @@ loadEnv(process.env.NODE_ENV || "development", process.cwd())
 
 const env = process.env
 
-const paymentProviders = env.SQUARE_ACCESS_TOKEN
+// Stripe card payments; only the manual test payment is offered without a key.
+const paymentProviders = env.STRIPE_API_KEY
   ? [
       {
-        resolve: "./src/modules/square-payment",
-        id: "square",
+        resolve: "@medusajs/medusa/payment-stripe",
+        id: "stripe",
         options: {
-          accessToken: env.SQUARE_ACCESS_TOKEN,
-          locationId: env.SQUARE_LOCATION_ID,
-          environment: env.SQUARE_ENVIRONMENT ?? "sandbox",
-          capture: env.SQUARE_AUTO_CAPTURE !== "false",
-          webhookSignatureKey: env.SQUARE_WEBHOOK_SIGNATURE_KEY,
-          webhookUrl: env.MEDUSA_BACKEND_URL
-            ? `${env.MEDUSA_BACKEND_URL}/hooks/payment/square_square`
-            : undefined,
+          apiKey: env.STRIPE_API_KEY,
+          webhookSecret: env.STRIPE_WEBHOOK_SECRET,
+          capture: env.STRIPE_AUTO_CAPTURE !== "false",
         },
       },
     ]

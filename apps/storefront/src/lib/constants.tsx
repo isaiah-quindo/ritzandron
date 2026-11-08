@@ -9,12 +9,8 @@ export const paymentInfoMap: Record<
   string,
   { title: string; icon: React.JSX.Element }
 > = {
-  pp_square_square: {
-    title: "Credit or debit card",
-    icon: <CreditCard />,
-  },
   pp_stripe_stripe: {
-    title: "Credit card",
+    title: "Credit or debit card",
     icon: <CreditCard />,
   },
   "pp_medusa-payments_default": {
@@ -49,9 +45,6 @@ export const isStripeLike = (providerId?: string) => {
 
 export const isPaypal = (providerId?: string) => {
   return providerId?.startsWith("pp_paypal")
-}
-export const isSquare = (providerId?: string) => {
-  return providerId?.startsWith("pp_square_")
 }
 
 export const isManual = (providerId?: string) => {

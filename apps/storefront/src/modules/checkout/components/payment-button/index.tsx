@@ -1,14 +1,13 @@
 "use client"
 
-import { isManual, isSquare, isStripeLike } from "@lib/constants"
-import { placeOrder, setSquarePaymentToken } from "@lib/data/cart"
+import { isManual, isStripeLike } from "@lib/constants"
+import { placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@modules/common/components/ui"
 import { useElements, useStripe } from "@stripe/react-stripe-js"
 import { useParams } from "next/navigation"
-import React, { useRef, useState } from "react"
+import React, { useState } from "react"
 import ErrorMessage from "../error-message"
-import SquareCardForm, { SquareCardHandle } from "../square-card"
 
 type PaymentButtonProps = {
   cart: HttpTypes.StoreCart
@@ -29,14 +28,6 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
   const paymentSession = cart.payment_collection?.payment_sessions?.[0]
 
   switch (true) {
-    case isSquare(paymentSession?.provider_id):
-      return (
-        <SquarePaymentButton
-          notReady={notReady}
-          cart={cart}
-          data-testid={dataTestId}
-        />
-      )
     case isStripeLike(paymentSession?.provider_id):
       return (
         <StripePaymentButton
@@ -160,63 +151,6 @@ const StripePaymentButton = ({
       <ErrorMessage
         error={errorMessage}
         data-testid="stripe-payment-error-message"
-      />
-    </>
-  )
-}
-
-const SquarePaymentButton = ({
-  cart,
-  notReady,
-  "data-testid": dataTestId,
-}: {
-  cart: HttpTypes.StoreCart
-  notReady: boolean
-  "data-testid"?: string
-}) => {
-  const cardRef = useRef<SquareCardHandle>(null)
-  const [cardReady, setCardReady] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-
-  const handlePayment = async () => {
-    if (!cardRef.current) {
-      return
-    }
-    setSubmitting(true)
-    setErrorMessage(null)
-
-    try {
-      const sourceId = await cardRef.current.tokenize()
-      await setSquarePaymentToken(cart, { source_id: sourceId })
-      // Redirects to the confirmation page on success.
-      await placeOrder()
-    } catch (err) {
-      // next/navigation redirects surface as thrown errors; let them through.
-      if ((err as { digest?: string })?.digest?.startsWith("NEXT_REDIRECT")) {
-        throw err
-      }
-      setErrorMessage(err instanceof Error ? err.message : String(err))
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  return (
-    <>
-      <SquareCardForm cart={cart} ref={cardRef} onReady={setCardReady} />
-      <Button
-        disabled={notReady || !cardReady}
-        onClick={handlePayment}
-        size="large"
-        isLoading={submitting}
-        data-testid={dataTestId}
-      >
-        Pay and place order
-      </Button>
-      <ErrorMessage
-        error={errorMessage}
-        data-testid="square-payment-error-message"
       />
     </>
   )

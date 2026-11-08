@@ -466,37 +466,3 @@ export async function listCartOptions() {
     cache: "force-cache",
   })
 }
-
-/**
- * Stores the Square Web Payments SDK card token on the payment session.
- * Medusa keeps it under `data.client`; the backend provider charges it when
- * the cart is completed.
- */
-export async function setSquarePaymentToken(
-  cart: HttpTypes.StoreCart,
-  clientData: { source_id: string; verification_token?: string }
-) {
-  const paymentCollection = cart.payment_collection
-  const session = paymentCollection?.payment_sessions?.find(
-    (s) => s.status === "pending"
-  )
-
-  if (!paymentCollection || !session) {
-    throw new Error("No active payment session. Please refresh and try again.")
-  }
-
-  const headers = {
-    ...(await getAuthHeaders()),
-  }
-
-  await sdk.client
-    .fetch(
-      `/store/payment-collections/${paymentCollection.id}/payment-sessions/${session.id}`,
-      {
-        method: "POST",
-        headers,
-        body: { client_data: clientData },
-      }
-    )
-    .catch(medusaError)
-}

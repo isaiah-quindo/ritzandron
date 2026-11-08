@@ -7,7 +7,7 @@ Ritz & Ron (ritzandron.com.au) is an Australian sterling-silver jewellery shop (
 - **Medusa v2** — commerce engine: products, prices, stock, cart, orders, customers, admin dashboard
 - **Sanity** — homepage, editorial, blog, FAQ/policies, and rich product storytelling (linked to Medusa products by ID, auto-synced)
 - **Supabase** — Postgres database for Medusa + Storage (S3-compatible) for product images
-- **Square** — payments (custom Medusa payment provider + Square Web Payments SDK)
+- **Stripe** — payments (Medusa's built-in Stripe provider + Stripe Payment Element)
 - **Australia Post** — flat-rate shipping options; staff type tracking numbers in Medusa admin
 - **Resend** — transactional email (order confirmation, shipped-with-tracking, password reset)
 
@@ -36,21 +36,16 @@ Start from `npx create-medusa-app@latest --with-nextjs-starter` — the starter 
 5. Customer auth stays in Medusa (emailpass). **Supabase Auth is not used** — avoids two identity systems.
 6. Seed script `apps/backend/src/scripts/seed.ts`: Region "Australia" (AUD, country AU), sales channel, stock location (NSW), **tax-inclusive pricing with 10% GST** tax rate, publishable API key, product categories mirroring today's nav (Silver Charms + sub-categories, Charm Bracelets, Earrings, Necklaces, Scrunchies, Gift Boxes), and the shipping setup in Phase 4.
 
-## Phase 2 — Square payments (custom Medusa payment provider)
-Module: `apps/backend/src/modules/square-payment/` (`index.ts` with `ModuleProvider(Modules.PAYMENT, …)`, `service.ts` extending `AbstractPaymentProvider`), registered in `medusa-config.ts` under the payment module with id `square`. Uses the official `square` Node SDK.
+## Phase 2 — Stripe payments (Medusa's built-in provider)
+Replaced the original custom Square provider. Medusa's `@medusajs/medusa/payment-stripe` is registered in `medusa-config.ts` with id `stripe` (provider `pp_stripe_stripe`) when `STRIPE_API_KEY` is set; `capture` follows `STRIPE_AUTO_CAPTURE` (default true).
 
 Flow:
-- Storefront checkout renders Square **Web Payments SDK** card field (plus Apple Pay / Google Pay buttons) → tokenizes to a `sourceId`.
-- Storefront updates the payment session data with the token, then calls cart complete.
-- `initiatePayment`: return session data (amount, currency AUD, idempotency key).
-- `authorizePayment`: Square `CreatePayment` with `autocomplete: false`, `amountMoney` in cents, `locationId`, `buyerEmailAddress`, `referenceId` = cart id; returns `authorized` + Square payment id.
-- `capturePayment`: `CompletePayment` (configurable `autoCapture` option to capture immediately on order placement — recommended for simplicity).
-- `refundPayment`: `RefundPayment`; `cancelPayment`: `CancelPayment`; `getPaymentStatus`/`retrievePayment`: `GetPayment`.
-- `getWebhookActionAndData`: verify Square signature (`WebhooksHelper.isValidWebhookEventSignature`) for `payment.updated`; endpoint at `/hooks/payment/square_square`.
+- Storefront checkout uses the Medusa starter's Stripe pieces in `src/modules/checkout/components/payment*`: Payment Element in `stripe-wrapper`, `stripe.confirmPayment` with `redirect: "if_required"`, then cart complete.
+- Redirect-based methods return to `src/app/api/payment-return/route.ts`, which checks the PaymentIntent against the cart's session before completing it.
+- Webhook endpoint `/hooks/payment/stripe_stripe` (payment_intent succeeded / amount_capturable_updated / payment_failed / partially_funded), signed with `STRIPE_WEBHOOK_SECRET`.
 - Enable provider for the Australia region in seed.
-- Env: `SQUARE_ACCESS_TOKEN`, `SQUARE_LOCATION_ID`, `SQUARE_ENVIRONMENT` (sandbox|production), `SQUARE_WEBHOOK_SIGNATURE_KEY`; storefront `NEXT_PUBLIC_SQUARE_APP_ID`, `NEXT_PUBLIC_SQUARE_LOCATION_ID`.
-- Storefront: replace starter's Stripe pieces in `src/modules/checkout/components/payment*` with a `SquareCardForm` component (load `https://sandbox.web.squarecdn.com/v1/square.js` / production URL by env).
-- Future option: Square's Afterpay/Clearpay method in the Web Payments SDK (AU supported) — not in v1.
+- Env: `STRIPE_API_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_AUTO_CAPTURE`; storefront `NEXT_PUBLIC_STRIPE_KEY`.
+- Future option: Afterpay/Clearpay through Stripe (AU supported) — not in v1.
 
 ## Phase 3 — Sanity (content + product enrichment)
 Studio embedded in Next.js at `apps/storefront/src/app/studio/[[...tool]]/page.tsx` (`next-sanity`).
@@ -92,7 +87,7 @@ Revalidation: Next.js uses tagged fetches (`products`, `sanity:<type>`); route `
   - Shop / category listing (`/shop`, `/categories/[...handle]`) — filters by category and price, sort; editorial banner from Sanity.
   - Product page — gallery with zoom, price incl. GST, variant selector if any, add to bag, story/materials/care accordions from Sanity, "Add a gift box" upsell, related products.
   - Slide-out cart drawer; free-shipping progress bar ("$X away from free shipping").
-  - Checkout — single-page steps: contact/email → address (AU) → shipping option → Square payment → review.
+  - Checkout — single-page steps: contact/email → address (AU) → shipping option → Stripe payment → review.
   - Account — login/register, addresses, order history with tracking.
   - Content: About, FAQ, Shipping, Returns & Exchanges, Care Guide, Blog, Contact (form → Resend email to shop).
   - Search — Medusa product search (`q` param) for v1.
@@ -100,20 +95,28 @@ Revalidation: Next.js uses tagged fetches (`products`, `sanity:<type>`); route `
 - Accessibility and performance: `next/image`, AA contrast, keyboard-navigable drawer/menus.
 
 ## Deferred (post-v1)
-Wishlist, product reviews, Afterpay via Square, Algolia/Meilisearch search, hosting/deploy (Vercel for storefront + Railway/Render or Medusa Cloud for backend+Redis), domain cut-over.
+Wishlist, product reviews, Afterpay via Stripe, Algolia/Meilisearch search, hosting/deploy (Vercel for storefront + Railway/Render or Medusa Cloud for backend+Redis), domain cut-over.
 
 ## Environment variables (summary)
-- backend: `DATABASE_URL` (Supabase), `REDIS_URL`, `STORE_CORS`, `ADMIN_CORS`, `AUTH_CORS`, `JWT_SECRET`, `COOKIE_SECRET`, `S3_*` (Supabase Storage), `SQUARE_*`, `RESEND_*`, `SANITY_PROJECT_ID`, `SANITY_DATASET`, `SANITY_WRITE_TOKEN`, `STOREFRONT_URL`, `REVALIDATE_SECRET`.
-- storefront: `MEDUSA_BACKEND_URL`, `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SANITY_PROJECT_ID`, `NEXT_PUBLIC_SANITY_DATASET`, `SANITY_API_READ_TOKEN`, `SANITY_WEBHOOK_SECRET`, `NEXT_PUBLIC_SQUARE_APP_ID`, `NEXT_PUBLIC_SQUARE_LOCATION_ID`, `RESEND_API_KEY` (contact/newsletter).
+- backend: `DATABASE_URL` (Supabase), `REDIS_URL`, `STORE_CORS`, `ADMIN_CORS`, `AUTH_CORS`, `JWT_SECRET`, `COOKIE_SECRET`, `S3_*` (Supabase Storage), `STRIPE_*`, `RESEND_*`, `SANITY_PROJECT_ID`, `SANITY_DATASET`, `SANITY_WRITE_TOKEN`, `STOREFRONT_URL`, `REVALIDATE_SECRET`.
+- storefront: `MEDUSA_BACKEND_URL`, `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SANITY_PROJECT_ID`, `NEXT_PUBLIC_SANITY_DATASET`, `SANITY_API_READ_TOKEN`, `SANITY_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_KEY`, `RESEND_API_KEY` (contact/newsletter).
 
-Accounts the user needs to create/provide: Supabase project, Sanity project, Square developer app (sandbox), Resend account + verified domain.
+Accounts the user needs to create/provide: Supabase project, Sanity project, Stripe account (test mode), Resend account + verified domain.
 
 ## Verification (end-to-end, all local)
 1. `docker compose up -d` (Redis); `npm run dev` in backend → admin at `localhost:9000/app` loads; seed creates AU region, GST, shipping options.
 2. Upload a product image in admin → file lands in Supabase Storage bucket and renders on storefront.
 3. Create a product in admin → a matching `product` doc appears in Sanity Studio (`localhost:8000/studio`); add a story → it shows on the product page after webhook revalidation.
-4. Checkout with Square sandbox card `4111 1111 1111 1111` → order created in Medusa, payment visible in Square sandbox dashboard; order-confirmation email arrives (Resend test/`delivered@resend.dev`).
+4. Checkout with Stripe test card `4242 4242 4242 4242` → order created in Medusa, payment visible in the Stripe test dashboard; order-confirmation email arrives (Resend test/`delivered@resend.dev`).
 5. Cart ≥ $99 → Parcel Post shows $0; under $99 → flat fee.
 6. In admin: create fulfillment → mark shipped with a tracking number → "on its way" email arrives with working AusPost link; customer account shows tracking.
-7. Refund from admin → refund appears in Square sandbox.
+7. Refund from admin → refund appears in the Stripe test dashboard.
 8. Lighthouse on home/product pages (target ≥ 90 performance/accessibility); mobile layout check in browser pane.
+
+## Stripe in production
+1. In the Stripe dashboard (live mode, not test), copy the live keys: secret `sk_live_…` (or a restricted `rk_live_…` with write access to PaymentIntents, Customers and Refunds, and read access to PaymentMethods) and publishable `pk_live_…`.
+2. Backend env on Laravel Cloud: `STRIPE_API_KEY` = the live secret/restricted key, `STRIPE_AUTO_CAPTURE=true`. Never put live keys in a local `.env`.
+3. Storefront env: `NEXT_PUBLIC_STRIPE_KEY` = `pk_live_…` (same account as the backend key), then redeploy, because `NEXT_PUBLIC_*` values are baked in at build time.
+4. Dashboard → Developers → Workbench → Webhooks (or go straight to dashboard.stripe.com/webhooks) → Create an event destination (source: your account; payload style: Snapshot, not Thin; type: webhook endpoint) at `{MEDUSA_BACKEND_URL}/hooks/payment/stripe_stripe` for `payment_intent.succeeded`, `payment_intent.amount_capturable_updated`, `payment_intent.payment_failed` and `payment_intent.partially_funded`. Set its signing secret as `STRIPE_WEBHOOK_SECRET` on the backend; the CLI's local `whsec_` doesn't work here.
+5. Make sure `pp_stripe_stripe` is enabled on the Australia region in the production admin (Settings → Regions); the seed only adds it if `STRIPE_API_KEY` was set when the region was first created.
+6. Smoke test: place a small real order, check it in Medusa admin and the Stripe dashboard, confirm the webhook delivery shows 200, then refund it from the admin.
