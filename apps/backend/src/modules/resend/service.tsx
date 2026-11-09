@@ -12,6 +12,7 @@ import {
   type MailtrapOptions,
 } from "../../lib/email-transport"
 import OrderPlacedEmail, { orderPlacedSubject } from "./emails/order-placed"
+import NewOrderAlertEmail, { newOrderAlertSubject } from "./emails/new-order-alert"
 import OrderShippedEmail, { orderShippedSubject } from "./emails/order-shipped"
 import {
   OrderCanceledEmail,
@@ -29,6 +30,7 @@ export type ResendOptions = {
 
 export enum EmailTemplates {
   ORDER_PLACED = "order-placed",
+  NEW_ORDER_ALERT = "new-order-alert",
   ORDER_SHIPPED = "order-shipped",
   ORDER_CANCELED = "order-canceled",
   PASSWORD_RESET = "password-reset",
@@ -39,12 +41,18 @@ type InjectedDependencies = {
   logger: Logger
 }
 
-type Rendered = { subject: string; element: ReactElement }
+// replyTo overrides the shop's reply-to address for that email.
+type Rendered = { subject: string; element: ReactElement; replyTo?: string }
 
 const templates: Record<EmailTemplates, (data: any) => Rendered> = {
   [EmailTemplates.ORDER_PLACED]: (data) => ({
     subject: orderPlacedSubject(data.order),
     element: <OrderPlacedEmail order={data.order} />,
+  }),
+  [EmailTemplates.NEW_ORDER_ALERT]: (data) => ({
+    subject: newOrderAlertSubject(data.order),
+    element: <NewOrderAlertEmail order={data.order} />,
+    replyTo: data.order.email ?? undefined,
   }),
   [EmailTemplates.ORDER_SHIPPED]: (data) => ({
     subject: orderShippedSubject(data.order),
@@ -101,13 +109,13 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
       )
     }
 
-    const { subject, element } = build(notification.data ?? {})
+    const { subject, element, replyTo } = build(notification.data ?? {})
     const html = await render(element)
 
     try {
       return await this.transport_.send({
         from: notification.from?.trim() || this.options_.from,
-        replyTo: this.options_.reply_to,
+        replyTo: replyTo ?? this.options_.reply_to,
         to: notification.to,
         subject: notification.content?.subject ?? subject,
         html,

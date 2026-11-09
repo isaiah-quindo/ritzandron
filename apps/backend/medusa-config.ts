@@ -32,6 +32,7 @@ const mailtrap =
 if (isProduction) {
   const problems = [
     !env.RESEND_API_KEY && "RESEND_API_KEY is not set: customer emails will only be logged, not sent",
+    !env.ORDER_NOTIFY_EMAIL && "ORDER_NOTIFY_EMAIL is not set: the shop gets no email when an order is placed",
     !env.S3_BUCKET && "S3_BUCKET is not set: uploads go to local disk, which is wiped on redeploy",
     !env.REDIS_URL && "REDIS_URL is not set: events, workflows and locks run in memory only",
     [env.JWT_SECRET, env.COOKIE_SECRET].some((s) => !s || s === "supersecret") &&
