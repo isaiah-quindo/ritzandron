@@ -1,4 +1,10 @@
 import { getSiteSettings } from "@cms/queries"
+import {
+  FacebookIcon,
+  InstagramIcon,
+  StripeIcon,
+  TikTokIcon,
+} from "@modules/layout/components/brand-icons"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Wordmark from "@modules/common/components/wordmark"
 import NewsletterForm from "@modules/layout/components/newsletter-form"
@@ -50,9 +56,9 @@ const FooterColumn = ({
 export default async function Footer() {
   const settings = await getSiteSettings()
   const socials = [
-    { name: "Instagram", href: settings?.instagram },
-    { name: "TikTok", href: settings?.tiktok },
-    { name: "Facebook", href: settings?.facebook },
+    { name: "Instagram", href: settings?.instagram, Icon: InstagramIcon },
+    { name: "TikTok", href: settings?.tiktok, Icon: TikTokIcon },
+    { name: "Facebook", href: settings?.facebook, Icon: FacebookIcon },
   ].filter((s) => s.href)
 
   return (
@@ -67,17 +73,22 @@ export default async function Footer() {
               {settings?.newsletterHeading ?? "Join the email list"}
             </h2>
             <NewsletterForm />
+            <p className="flex items-center gap-1.5 text-[12px] text-stone mt-2">
+              <StripeIcon className="w-3.5 h-3.5 text-[#635BFF]" />
+              Secure payments by Stripe
+            </p>
             {socials.length > 0 && (
-              <ul className="flex gap-4 text-[13px] mt-2">
-                {socials.map((s) => (
-                  <li key={s.name}>
+              <ul className="flex gap-4 mt-1">
+                {socials.map(({ name, href, Icon }) => (
+                  <li key={name}>
                     <a
-                      href={s.href}
+                      href={href}
                       target="_blank"
                       rel="noreferrer"
-                      className="hover:opacity-60"
+                      aria-label={`Ritz & Ron on ${name}`}
+                      className="block text-charcoal hover:opacity-60"
                     >
-                      {s.name}
+                      <Icon className="w-5 h-5" />
                     </a>
                   </li>
                 ))}
